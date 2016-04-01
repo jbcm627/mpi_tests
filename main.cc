@@ -14,7 +14,6 @@ using namespace utils;
 #define MY (NY + 2*BW)
 #define MZ (NZ + 2*BW)
 
-#define N_INDEX(i, j, k, r) (r*MX*MY*MZ + (i + BW)*MY*MZ + ((j + BW)*NZ) + (k + BW))
 #define M_INDEX(i, j, k, r) ((r)*MX*MY*MZ + (i)*MY*MZ + ((j)*MZ) + (k))
 
 #define h 0.1
@@ -56,7 +55,7 @@ int main(int argc, char **argv)
   // create a "hot" point
   // as a check, the computation should not depend on where this point is,
   // how many nodes, processes, etc.
-  int hot_idx = M_INDEX(5,5,5,0);
+  int hot_idx = M_INDEX(1,1,1,0);
   if(grid.num() == 0)
   {
     grid[hot_idx] = 2.0;

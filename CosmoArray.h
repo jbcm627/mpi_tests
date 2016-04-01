@@ -216,10 +216,7 @@ private:
   /**
    * @brief      Store adjacent grid numbers / grid IDs for future exchanges
    * @description
-   *  sets an array of 6 'canonically ordered' grid numbers
-   *  indexes: 0/1 = right/left (x-axis)
-   *           2/3 = up/down (y-axis)
-   *           4/5 = fore/back (z-axis)
+   *  sets an array of grid numbers of adjacent grids
    *  requires grid_number and total_grids be set.
    */
   void _setAdjacentGridNumbers()
@@ -231,21 +228,35 @@ private:
     d_y = _getDivisorNearestSquareRoot(remaining_grids);
     d_z = remaining_grids / d_y;
 
-    // get "coordinates" of (this) particular grid in the domain
-    // below reverses standard indexing macro
-    int grid_x = grid_number / (d_y*d_z);
-    int grid_y = (grid_number - grid_x*d_y*d_z) / d_z;
-    int grid_z = (grid_number - grid_x*d_y*d_z - grid_y*d_z);
+    // let MPI set up coordinates of each grid
+    MPI_Comm comm;
+    int dimensions[3] = {d_x, d_y, d_z};
+    int is_dim_periodic[3] = {1, 1, 1};
+    int reorder = 1;
+    MPI_Cart_create(MPI_COMM_WORLD, 3, dimensions,
+      is_dim_periodic, reorder, &comm);
+
+    // grid coordinates of this grid
+    int grid_coords[3];
+    MPI_Cart_coords(comm, grid_number, 3, grid_coords);
 
     // determine adjacent grid cells assuming a periodic domain
     int bnd_x_idx, bnd_y_idx, bnd_z_idx;
     for(bnd_x_idx=-1; bnd_x_idx<=1; bnd_x_idx++)
       for(bnd_y_idx=-1; bnd_y_idx<=1; bnd_y_idx++)
         for(bnd_z_idx=-1; bnd_z_idx<=1; bnd_z_idx++)
-          adjacent_grid_numbers[bnd_x_idx+1][bnd_y_idx+1][bnd_z_idx+1] =
-            ((grid_x + d_x + bnd_x_idx)%d_x)*d_y*d_z
-            + ((grid_y + d_y + bnd_y_idx)%d_y)*d_z
-            + (grid_z + d_z + bnd_z_idx)%d_z;
+        {
+          int adjacent_grid_coords[3];
+          std::copy(grid_coords, grid_coords+3, adjacent_grid_coords);
+          adjacent_grid_coords[0] += bnd_x_idx;
+          adjacent_grid_coords[1] += bnd_y_idx;
+          adjacent_grid_coords[2] += bnd_z_idx;
+          
+          int adjacent_grid_num;
+          MPI_Cart_rank(comm, adjacent_grid_coords, &adjacent_grid_num);
+          adjacent_grid_numbers[bnd_x_idx+1][bnd_y_idx+1][bnd_z_idx+1]
+            = adjacent_grid_num;
+        }
   }
 
   /**
